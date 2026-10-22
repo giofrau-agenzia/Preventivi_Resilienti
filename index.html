@@ -27,7 +27,7 @@ main{max-width:1540px;margin:auto;padding:18px clamp(12px,3vw,40px) 60px}.view[h
 </head>  
 <body>  
 <header class="top">  
-  <div class="brand"><h1>Offerte resilienti</h1><small>Preventivi di fornitura e posa · versione 1.4</small></div>  
+  <div class="brand"><h1>Offerte resilienti</h1><small>Preventivi di fornitura e posa · versione 1.5</small></div>  
   <div class="top-actions no-print">  
     <span class="local">Salvato localmente</span>  
     <button class="btn secondary" id="newBtn">Nuova offerta</button>  
@@ -113,6 +113,7 @@ main{max-width:1540px;margin:auto;padding:18px clamp(12px,3vw,40px) 60px}.view[h
 const money=new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}),dateFmt=new Intl.DateTimeFormat("it-IT");  
 const rowTypes=["Materiale","Sfrido","Posa","Accessori","Collanti / nastri","Cordolo","Primer + lisciatura"];  
 const catalog={  
+ "Aquarelle Wall HFS":[["Materiale","Fornitura Aquarelle Wall HFS",20.4],["Sfrido","Sfrido teli 10%",2.04],["Posa","Posa - Rivestimento",15],["Accessori","",0],["Collanti / nastri","collante acrilico 250 g/mq",2.5],["Cordolo","PVC teli (0,50 ml/mq)",1.8],["Primer + lisciatura","",0]],
  "Acczent Essential Compact 80":[["Materiale","Fornitura Acczent Essential Compact 80",31.8],["Sfrido","Sfrido teli 10%",3.18],["Posa","Posa - Teli",12],["Accessori","",0],["Collanti / nastri","collante acrilico 250 g/mq",2.5],["Cordolo","PVC teli (0,50 ml/mq)",1.8],["Primer + lisciatura","Primer + Lisciatura 2 mani",9]],
  "Acczent Essential Compact 80 (Loose-Lay)":[["Materiale","Fornitura Acczent Essential Compact 80 (Loose-Lay)",31.8],["Sfrido","Sfrido teli 10%",3.18],["Posa","Posa - Teli Autoposante",12],["Accessori","",0],["Collanti / nastri","Genius Tape / TarkoTape",3],["Cordolo","PVC teli (0,50 ml/mq)",1.8],["Primer + lisciatura","Primer + Lisciatura 1 mano",6]],
  "iD Classic Click Ultimate 55":[["Materiale","Fornitura iD Classic Click Ultimate 55",0],["Sfrido","Sfrido piastre/doghe 5%",0],["Posa","Posa - LVT Incastro",18],["Accessori","",0],["Collanti / nastri","",0],["Cordolo","",0],["Primer + lisciatura","",0]],  
@@ -131,12 +132,16 @@ function fresh(){
  const today=new Date().toISOString().slice(0,10);  
  return{id:uid(),quoteNumber:"PREV-"+new Date().getFullYear()+"-"+String(db.length+1).padStart(3,"0"),quoteDate:today,validDays:30,status:"Bozza",client:"",project:"",address:"",contact:"",delivery:"",payment:"",general:0,profit:0,vat:22,notes:"",products:[],options:optSeed.map(x=>({...line("Optional",x[0],x[2],0),um:x[1],included:false}))};  
 }  
+function ensureQuote(){
+ if(!quote){quote=fresh();loadHeader();renderEditor()}
+ return quote;
+}
 function applied(r){return r.mode==="Manuale"?Number(r.manual)||0:Number(r.suggested)||0}  
 function rowTotal(r,p){let v=applied(r)*(Number(r.qty)||0);if(r.type==="Materiale")v*=1-(Number(p?.discount)||0)/100;return r.included?v:0}  
 function productTotal(p){return p.lines.reduce((a,r)=>a+rowTotal(r,p),0)}  
 function totals(q=quote){const products=q.products.reduce((a,p)=>a+productTotal(p),0),options=q.options.reduce((a,r)=>a+rowTotal(r),0),base=products+options,general=base*(Number(q.general)||0)/100,profit=(base+general)*(Number(q.profit)||0)/100,taxable=base+general+profit,vat=taxable*(Number(q.vat)||0)/100;return{products,options,general,profit,taxable,vat,total:taxable+vat}}  
-function show(view){$$(".view").forEach(v=>v.hidden=v.id!==view);$$(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===view));if(view==="archiveView")renderArchive()}  
-function save(){readHeader();const i=db.findIndex(x=>x.id===quote.id);if(i<0)db.push(structuredClone(quote));else db[i]=structuredClone(quote);localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}  
+function show(view){if(view==="editorView")ensureQuote();$$(".view").forEach(v=>v.hidden=v.id!==view);$$(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===view));if(view==="archiveView")renderArchive()}  
+function save(){ensureQuote();readHeader();const i=db.findIndex(x=>x.id===quote.id);if(i<0)db.push(structuredClone(quote));else db[i]=structuredClone(quote);localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}  
 function readHeader(){ids.forEach(id=>{const el=$("#"+id);quote[id]=["validDays","general","profit","vat"].includes(id)?Number(el.value)||0:el.value})}  
 function loadHeader(){ids.forEach(id=>{$("#"+id).value=quote[id]??""});$("#printTitle").textContent=`Preventivo ${quote.quoteNumber||""} - ${quote.client||""}`}  
 function openQuote(id){quote=structuredClone(db.find(x=>x.id===id));loadHeader();renderEditor();show("editorView")}  
@@ -155,6 +160,7 @@ function suggestedScheme(name){
  return [["Materiale","Fornitura "+name,0],["Sfrido",tile?"Sfrido piastre/doghe 5%":"Sfrido teli 10%",0],["Posa",posa[0],posa[1]],["Accessori","",0],["Collanti / nastri",coll[0],coll[1]],["Cordolo",cord[0],cord[1]],["Primer + lisciatura",primer[0],primer[1]]];
 }
 function addProduct(name){
+ ensureQuote();
  const clean=name.trim(),key=materialNames.find(x=>x.toLocaleLowerCase("it")==clean.toLocaleLowerCase("it"))||clean;
  const src=catalog[key]||suggestedScheme(key);
  quote.products.push({id:uid(),name:key,qty:0,discount:0,lines:src.map(x=>line(x[0],x[1],x[2],0))});
@@ -175,14 +181,14 @@ function rowHtml(r,ri,p){const a=applied(r),t=rowTotal(r,p);return`<tr data-ri="
 function renderOptions(){  
  $("#optionalBody").innerHTML=quote.options.map((r,i)=>`<tr data-oi="${i}" class="${r.included?"":"excluded"}"><td>${esc(r.desc)}</td><td><input class="o-um" value="${esc(r.um)}"></td><td><input class="o-suggested num" type="number" step=".01" value="${r.suggested}"></td><td class="mode-col"><select class="o-mode"><option${r.mode==="Suggerito"?" selected":""}>Suggerito</option><option${r.mode==="Manuale"?" selected":""}>Manuale</option></select></td><td class="manual-col"><input class="o-manual num" type="number" step=".01" value="${r.manual}" ${r.mode==="Manuale"?"":"disabled"}></td><td class="num applied">${money.format(applied(r))}</td><td><input class="o-qty num" type="number" min="0" step=".01" value="${r.qty}"></td><td><select class="o-included"><option value="true"${r.included?" selected":""}>Si</option><option value="false"${r.included?"":" selected"}>No</option></select></td><td class="num"><strong>${money.format(rowTotal(r))}</strong></td></tr>`).join("")  
 }  
-function updateSummary(){readHeader();const t=totals();["Products","Options","General","Profit","Taxable","Vat","Total"].forEach(k=>$("#sum"+k).textContent=money.format(t[k.toLowerCase()]));$("#printTitle").textContent=`Preventivo ${quote.quoteNumber||""} - ${quote.client||""}`}  
+function updateSummary(){if(!quote)return;readHeader();const t=totals();["Products","Options","General","Profit","Taxable","Vat","Total"].forEach(k=>$("#sum"+k).textContent=money.format(t[k.toLowerCase()]));$("#printTitle").textContent=`Preventivo ${quote.quoteNumber||""} - ${quote.client||""}`}  
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}  
 function bind(){  
  $$(".tab").forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));  
  $("#newBtn").addEventListener("click",newQuote);$("#archiveNewBtn").addEventListener("click",newQuote);$("#saveBtn").addEventListener("click",save);$("#sideSaveBtn").addEventListener("click",save);$("#backBtn").addEventListener("click",()=>show("archiveView"));$("#printBtn").addEventListener("click",()=>window.print());  
  $("#search").addEventListener("input",renderArchive);$("#statusFilter").addEventListener("change",renderArchive);  
  $("#archiveBody").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const id=b.dataset.id;if(b.classList.contains("edit"))openQuote(id);if(b.classList.contains("duplicate")){const q=structuredClone(db.find(x=>x.id===id));q.id=uid();q.quoteNumber+="-COPIA";q.status="Bozza";db.push(q);localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}if(b.classList.contains("delete")&&confirm("Eliminare definitivamente questa offerta?")){db=db.filter(x=>x.id!==id);localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}});  
- $("#addProductBtn").addEventListener("click",()=>{$("#materialName").value="";$("#productDialog").showModal()});  
+ $("#addProductBtn").addEventListener("click",()=>{ensureQuote();$("#materialName").value="";$("#productFeedback").textContent="Seleziona il materiale e premi Inserisci materiale.";$("#productDialog").showModal()});  
  function insertSelectedProduct(){
   const el=$("#materialName"),n=el.value.trim(),fb=$("#productFeedback");
   if(!n){fb.textContent="Seleziona prima un materiale.";el.focus();return}
