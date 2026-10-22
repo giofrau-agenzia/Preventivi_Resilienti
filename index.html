@@ -27,7 +27,7 @@ main{max-width:1540px;margin:auto;padding:18px clamp(12px,3vw,40px) 60px}.view[h
 </head>  
 <body>  
 <header class="top">  
-  <div class="brand"><h1>Offerte resilienti</h1><small>Preventivi di fornitura e posa</small></div>  
+  <div class="brand"><h1>Offerte resilienti</h1><small>Preventivi di fornitura e posa · versione 1.4</small></div>  
   <div class="top-actions no-print">  
     <span class="local">Salvato localmente</span>  
     <button class="btn secondary" id="newBtn">Nuova offerta</button>  
@@ -104,8 +104,8 @@ main{max-width:1540px;margin:auto;padding:18px clamp(12px,3vw,40px) 60px}.view[h
 <dialog id="productDialog">  
   <form id="productForm" class="card" style="min-width:min(520px,90vw);margin:0">  
     <h3>Aggiungi materiale</h3>  
-    <div class="field"><label for="materialName">Materiale</label><select id="materialName"><option value="">Seleziona un materiale...</option></select></div>  
-    <div class="actions" style="margin-block-start:16px"><button class="btn" type="submit" id="confirmProduct">Aggiungi</button><button class="btn secondary" type="button" id="cancelProduct">Annulla</button></div>  
+    <div class="field"><label for="materialName">Materiale</label><select id="materialName"><option value="">Seleziona un materiale...</option></select><small id="productFeedback" class="muted">Seleziona il materiale e premi Inserisci materiale.</small></div>  
+    <div class="actions" style="margin-block-start:16px"><button class="btn" type="button" id="confirmProduct">Inserisci materiale</button><button class="btn secondary" type="button" id="cancelProduct">Annulla</button></div>  
   </form>  
 </dialog>  
 <script>  
@@ -113,6 +113,8 @@ main{max-width:1540px;margin:auto;padding:18px clamp(12px,3vw,40px) 60px}.view[h
 const money=new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}),dateFmt=new Intl.DateTimeFormat("it-IT");  
 const rowTypes=["Materiale","Sfrido","Posa","Accessori","Collanti / nastri","Cordolo","Primer + lisciatura"];  
 const catalog={  
+ "Acczent Essential Compact 80":[["Materiale","Fornitura Acczent Essential Compact 80",31.8],["Sfrido","Sfrido teli 10%",3.18],["Posa","Posa - Teli",12],["Accessori","",0],["Collanti / nastri","collante acrilico 250 g/mq",2.5],["Cordolo","PVC teli (0,50 ml/mq)",1.8],["Primer + lisciatura","Primer + Lisciatura 2 mani",9]],
+ "Acczent Essential Compact 80 (Loose-Lay)":[["Materiale","Fornitura Acczent Essential Compact 80 (Loose-Lay)",31.8],["Sfrido","Sfrido teli 10%",3.18],["Posa","Posa - Teli Autoposante",12],["Accessori","",0],["Collanti / nastri","Genius Tape / TarkoTape",3],["Cordolo","PVC teli (0,50 ml/mq)",1.8],["Primer + lisciatura","Primer + Lisciatura 1 mano",6]],
  "iD Classic Click Ultimate 55":[["Materiale","Fornitura iD Classic Click Ultimate 55",0],["Sfrido","Sfrido piastre/doghe 5%",0],["Posa","Posa - LVT Incastro",18],["Accessori","",0],["Collanti / nastri","",0],["Cordolo","",0],["Primer + lisciatura","",0]],  
  "Desso Arable EcoBase (su sopraelevato)":[["Materiale","Fornitura Desso Arable EcoBase (su sopraelevato)",36.66],["Sfrido","Sfrido piastre/doghe 5%",1.83],["Posa","Posa - LVT/MOQ Autoposante",12],["Accessori","",0],["Collanti / nastri","collante EcoFiX 150 g/mq",2.30],["Cordolo","",0],["Primer + lisciatura","",0]],  
  "Acczent Platinium 100":[["Materiale","Fornitura Acczent Platinium 100",69],["Sfrido","Sfrido teli 10%",6.90],["Posa","Posa - Teli",12],["Accessori","",0],["Collanti / nastri","collante acrilico 250 g/mq",2.50],["Cordolo","PVC teli (0,50 ml/mq)",1.80],["Primer + lisciatura","Primer + Lisciatura 2 mani",9]]  
@@ -181,9 +183,14 @@ function bind(){
  $("#search").addEventListener("input",renderArchive);$("#statusFilter").addEventListener("change",renderArchive);  
  $("#archiveBody").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const id=b.dataset.id;if(b.classList.contains("edit"))openQuote(id);if(b.classList.contains("duplicate")){const q=structuredClone(db.find(x=>x.id===id));q.id=uid();q.quoteNumber+="-COPIA";q.status="Bozza";db.push(q);localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}if(b.classList.contains("delete")&&confirm("Eliminare definitivamente questa offerta?")){db=db.filter(x=>x.id!==id);localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}});  
  $("#addProductBtn").addEventListener("click",()=>{$("#materialName").value="";$("#productDialog").showModal()});  
- $("#productForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#materialName").value.trim();if(!n){$("#materialName").focus();return}addProduct(n);$("#productDialog").close()});
+ function insertSelectedProduct(){
+  const el=$("#materialName"),n=el.value.trim(),fb=$("#productFeedback");
+  if(!n){fb.textContent="Seleziona prima un materiale.";el.focus();return}
+  try{addProduct(n);fb.textContent="Materiale inserito.";$("#productDialog").close();setTimeout(()=>{$("#products").scrollIntoView({behavior:"smooth",block:"start"})},50)}catch(err){console.error(err);fb.textContent="Errore durante l'inserimento: "+err.message;alert("Non è stato possibile inserire il materiale: "+err.message)}
+ }
+ $("#productForm").addEventListener("submit",e=>{e.preventDefault();insertSelectedProduct()});
+ $("#confirmProduct").addEventListener("click",insertSelectedProduct);
  $("#cancelProduct").addEventListener("click",()=>$("#productDialog").close());
- $("#materialName").addEventListener("change",e=>{const n=e.target.value.trim();if(!n)return;addProduct(n);$("#productDialog").close()});  
  $("#headerFields").addEventListener("input",updateSummary);  
  $("#products").addEventListener("input",productEvent);$("#products").addEventListener("change",productEvent);$("#products").addEventListener("click",productClick);  
  $("#optionalBody").addEventListener("input",optionEvent);$("#optionalBody").addEventListener("change",optionEvent);  
