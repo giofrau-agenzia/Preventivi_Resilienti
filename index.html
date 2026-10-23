@@ -213,8 +213,8 @@ function bind(){
  $("#confirmProduct").addEventListener("click",insertSelectedProduct);  
  $("#cancelProduct").addEventListener("click",()=>$("#productDialog").close());  
  $("#headerFields").addEventListener("input",updateSummary);    
- $("#products").addEventListener("input",productEvent);$("#products").addEventListener("change",productEvent);$("#products").addEventListener("click",productClick);    
- $("#optionalBody").addEventListener("input",optionEvent);$("#optionalBody").addEventListener("change",optionEvent);    
+ $("#products").addEventListener("change",productEvent);$("#products").addEventListener("click",productClick);    
+ $("#optionalBody").addEventListener("change",optionEvent);    
  $("#exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="archivio-offerte.json";a.click();URL.revokeObjectURL(a.href)});    
  $("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.addEventListener("load",()=>{try{const x=JSON.parse(rd.result);if(!Array.isArray(x))throw 0;if(confirm("Sostituire l'archivio locale con quello importato?")){db=x;localStorage.setItem("resilientQuotes",JSON.stringify(db));renderArchive()}}catch{alert("File archivio non valido.")}});rd.readAsText(f)});    
 }    
